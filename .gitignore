@@ -1,0 +1,8 @@
+cmake-build-debug/
+.idea/
+program
+*.txt
+*Table*
+table*
+*_Summary
+TempCMake
