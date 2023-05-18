@@ -316,6 +316,12 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
     moniKTable[0][2] = currL;
     moniKTable[0][3] = currs;
 
+    std::cout << currq <<"\t";
+    std::cout << currl <<"\t";
+    std::cout << currL << "\t";
+    std::cout << moniKTable[0][4] << "\t";
+    std::cout << currs << std::endl;
+
     for (int i = 1; i < p_n; i++) {
         BWTArrays[i] = (char*) calloc(k, sizeof(char));
         moniKTable[i] = (unsigned int*) calloc(8, sizeof(int));
@@ -409,7 +415,7 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
     std::cout << currq <<"\t";
     std::cout << currl <<"\t";
     std::cout << currL << "\t";
-    std::cout << moniKTable[p_n-1][4] << "\t";
+    std::cout << moniKTable[p_n][4] << "\t";
     std::cout << currs << std::endl;
 
     return moniKTable;

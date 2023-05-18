@@ -2,7 +2,9 @@ cmake-build-debug/
 .idea/
 program
 *.txt
-*Table*
+*Table[0-9]*
 table*
 *_Summary
 TempCMake
+/test_TestBin
+/testtestBin

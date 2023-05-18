@@ -2,18 +2,10 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
-#include <sdsl/lcp_byte.hpp>
-#include <sdsl/lcp_bitcompressed.hpp>
-#include <sdsl/suffix_arrays.hpp>
 #include <algorithm>
-#include "MONI_K.h"
 
-int rowComp(const void*, const void*);
-int rowCompArrayFirstElem(const void*, const void*);
-int rowCompArraySecondElem(const void*, const void*);
-unsigned int pred(unsigned int, const unsigned int*, int, int);
-unsigned int pred2D(unsigned int, unsigned int**, int, int);
-unsigned int constructDataStructures(sdsl::csa_bitcompressed<> *, sdsl::lcp_bitcompressed<> *, const std::string&);
+#include "MONI_K.h"
+#include "lcp_test.h"
 
 int main(int argc, char** argv) {
     std::cout << "Please enter the file name" << std::endl;
@@ -170,33 +162,36 @@ int main(int argc, char** argv) {
 
     std::cout << "Writing to file" << std::endl;
     std::ofstream summaryFile(file_name.substr(0,file_name.length()-4) + "_Summary");
-    std::ofstream table2File(file_name.substr(0,file_name.length()-4) + "_Table2MONI");
-    std::ofstream table3File(file_name.substr(0,file_name.length()-4) + "_Table3MONI");
-    std::ofstream table4File(file_name.substr(0,file_name.length()-4) + "_Table4MONI");
+    auto table2File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table2MONI_Bin", std::ios::out | std::ios::binary);
+    auto table3File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table3MONI_Bin", std::ios::out | std::ios::binary);
+    auto table4File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table4MONI_Bin", std::ios::out | std::ios::binary);
+    auto tableTest = std::fstream(file_name.substr(0,file_name.length()-4) + "_TestBin", std::ios::out | std::ios::binary);
+
+    tableTest.write((char*)&n, sizeof(int));
+    tableTest.write((char*)&r, sizeof(int));
+
+    tableTest.close();
 
     summaryFile << n << "\t" << r << std::endl;
 
     summaryFile.close();
 
-    for (int i = 0; i < r; i++) {
-        for (int j = 0; j < table2NumColumns; j++) {
-            table2File << table2[j][i] << "\t";
-
-            if (j < table3NumColumns) {
-                table3File << table3[i][j] << "\t";
-            }
-
-            if (j < table4NumColumns) {
-                table4File << table4[i][j] << "\t";
-            }
-        }
-
-        table2File << std::endl;
-        table3File << std::endl;
-        table4File << std::endl;
+    for (int i = 0; i < table2NumColumns; i++) {
+        table2File.write((char*)table2[i], r * sizeof(int));
     }
 
     table2File.close();
+
+    for (int i = 0; i < r; i++) {
+        for (int j = 0; j < table3NumColumns; j++) {
+            table3File.write((char*)&table3[i][j], sizeof(int));
+        }
+
+        for (int j = 0; j < table4NumColumns; j++) {
+            table4File.write((char*)&table4[i][j], sizeof(int));
+        }
+    }
+
     table3File.close();
     table4File.close();
 
