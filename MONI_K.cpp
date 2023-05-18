@@ -2,13 +2,12 @@
 #include <fstream>
 #include <cstdlib>
 #include <iostream>
-#include <sdsl/wt_huff.hpp>
 #include <sdsl/wt_blcd.hpp>
-#include <sdsl/wt_rlmn.hpp>
 #include <sdsl/construct.hpp>
 #include <tuple>
 #include <algorithm>
 #include <vector>
+
 #include "MONI_K.h"
 
 int main(int argc, char** argv) {
@@ -22,8 +21,9 @@ int main(int argc, char** argv) {
     std::getline(std::cin, fileName);
 
     int n, r;
+    bool kConstruction = true;
 
-    std::ifstream summaryFile(fileName + "_Summary");
+    std::ifstream summaryFile(fileName + "_Summary_Bin");
 
     summaryFile >> n;
     summaryFile >> r;
@@ -38,13 +38,21 @@ int main(int argc, char** argv) {
 
     textFile.close();
 
-    std::string table2Name = fileName + "_Table2MONI";
-    std::string table3Name = fileName + "_Table3MONI";
-    std::string table4Name = fileName + "_Table4MONI";
+//    std::string table2Name = fileName + "_Table2MONI";
+//    std::string table3Name = fileName + "_Table3MONI";
+//    std::string table4Name = fileName + "_Table4MONI";
 
-    unsigned int** table2 = readTable(table2Name, r, table2NumColumns);
-    unsigned int** table3 = readTable(table3Name, r, table3NumColumns);
-    unsigned int** table4 = readTable(table4Name, r, table4NumColumns);
+    std::string table2NameBin = fileName + "_Table2MONI_Bin";
+    std::string table3NameBin = fileName + "_Table3MONI_Bin";
+    std::string table4NameBin = fileName + "_Table4MONI_Bin";
+
+//    unsigned int** table2 = readTable(table2Name, r, table2NumColumns);
+//    unsigned int** table3 = readTable(table3Name, r, table3NumColumns);
+//    unsigned int** table4 = readTable(table4Name, r, table4NumColumns);
+
+    MONI_Table tableMONI(table2NameBin, r, kConstruction);
+    Phi_Table tablePhi(table3NameBin, r);
+    Inverse_Phi_Table tableInversePhi(table4NameBin, r);
 
     std::cout << "Please enter a pattern:" << std::endl;
     std::string pattern;
@@ -58,8 +66,8 @@ int main(int argc, char** argv) {
     unsigned int curri = p_n;
     unsigned int currj = 5;
     unsigned int currl = 0;
-    unsigned int currq = table2[currj][0];
-    unsigned int currSA = table2[currj][1];
+    unsigned int currq = tableMONI.head[currj];
+    unsigned int currSA = tableMONI.SA_head[currj];
 
 
     auto moniKTable = (unsigned int**) calloc(p_n + 1, sizeof(int*));
@@ -68,7 +76,7 @@ int main(int argc, char** argv) {
     std::string BWTHead;
 
     for (int i = 0; i < r; i++) {
-        BWTHead += (char) table2[i][4];
+        BWTHead += (char) tableMONI.BWT_head[i];
     }
 
     sdsl::wt_blcd<> wtBlcd;
@@ -84,19 +92,19 @@ int main(int argc, char** argv) {
         moniKTable[i] = (unsigned int*) calloc(5, sizeof(int));
 
         tempSA = currSA;
-        inversePhiRow = pred2D(tempSA, table4, 1, 0, r, r);
+        inversePhiRow = pred2D(tempSA, tableInversePhi.SA_tail, 0, r, r);
 
         for (int j = 0; j < (k-1); j++) {
-            tempSA = inversePhi(table4, inversePhiRow, tempSA, r);
+            tempSA = inversePhi(tableInversePhi, inversePhiRow, tempSA, r);
         }
 
-        phiRow = pred2D(tempSA, table3, 0, 0, r, r);
+        phiRow = pred2D(tempSA, tablePhi.SA_head, 0, r, r);
 
         LCPArrays[i] = (unsigned int*) calloc(numLCP, sizeof(unsigned int));
 
         for (int j = 0; j < numLCP; j++) {
-            LCPArrays[i][numLCP - (j + 1)] = LCPStep(table3, phiRow, tempSA);
-            tempSA = phi(table3, phiRow, tempSA, r);
+            LCPArrays[i][numLCP - (j + 1)] = LCPStep(tablePhi, phiRow, tempSA);
+            tempSA = phi(tablePhi, phiRow, tempSA, r);
         }
 
         unsigned int maxMin = 0;
@@ -112,8 +120,8 @@ int main(int argc, char** argv) {
 
         if (curri > 0) {
             auto prevLetter = (unsigned int) pattern[curri - 1];
-            if (table2[currj][4] != prevLetter) {
-                updateRow(text, prevLetter, table2, currj, currl, currq, currSA, r);
+            if (tableMONI.BWT_head[currj] != prevLetter) {
+                updateRow(text, prevLetter, tableMONI, currj, currl, currq, currSA, r);
             }
         }
 
@@ -136,10 +144,8 @@ int main(int argc, char** argv) {
 
         curri--;
         currl++;
-        LFStep(table2, currj, currq, currSA, wtBlcd, r);
+        LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
     }
-
-    unsigned int** preCalcMONIk = preCalcMONI(table2, table3, table4, r, wtBlcd, pattern, text, k, n);
 
     std::cout << "The k-MEMs of " << pattern << " online:" << std::endl;
     std::cout << pattern.substr(0, moniKTable[p_n][4]) << std::endl;
@@ -150,15 +156,18 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout << "The k-MEMs of " << pattern << " pre-computed:" << std::endl;
-    std::cout << pattern.substr(0, preCalcMONIk[p_n][4]) << std::endl;
+    if (kConstruction) {
+        unsigned int **preCalcMONIk = preCalcMONI(tableMONI, tablePhi, tableInversePhi, r, wtBlcd, pattern, text, k, n);
 
-    for (int i = p_n - 1; i > 0; i--) {
-        if (preCalcMONIk[i][4] >= preCalcMONIk[i+1][4]) {
-            std::cout << pattern.substr(p_n - i, preCalcMONIk[i][4]) << std::endl;
+        std::cout << "The k-MEMs of " << pattern << " pre-computed:" << std::endl;
+        std::cout << pattern.substr(0, preCalcMONIk[p_n][4]) << std::endl;
+
+        for (int i = p_n - 1; i > 0; i--) {
+            if (preCalcMONIk[i][4] >= preCalcMONIk[i + 1][4]) {
+                std::cout << pattern.substr(p_n - i, preCalcMONIk[i][4]) << std::endl;
+            }
         }
     }
-
 
     return 0;
 }
@@ -194,33 +203,33 @@ int LCE(const std::string& text, unsigned int a, unsigned int b) {
     return lce;
 }
 
-void LFStep(unsigned int** table2, unsigned int& currj, unsigned int& currq, unsigned int& currSA, sdsl::wt_blcd<>& wtBlcd, int r) {
-    int pi = wtBlcd.rank(currj, (char) table2[currj][4]) + std::get<1>(wtBlcd.lex_smaller_count(r, (char) table2[currj][4]));
+void LFStep(MONI_Table tableMONI, unsigned int& currj, unsigned int& currq, unsigned int& currSA, sdsl::wt_blcd<>& wtBlcd, int r) {
+    int pi = wtBlcd.rank(currj, (char) tableMONI.BWT_head[currj]) + std::get<1>(wtBlcd.lex_smaller_count(r, (char) tableMONI.BWT_head[currj]));
 
-    currq = table2[pi][5] + currq - table2[currj][0];
+    currq = tableMONI.mu[pi] + currq - tableMONI.head[currj];
     currSA = currSA - 1;
 
-    currj = exponentialSearch(table2, 0, table2[pi][6], currq, r);
+    currj = exponentialSearch(tableMONI.head, tableMONI.finger[pi], currq, r);
 }
 
-unsigned int exponentialSearch(unsigned int** table, unsigned int column, unsigned int start, unsigned int target, int r) {
+unsigned int exponentialSearch(unsigned int* table, unsigned int start, unsigned int target, int r) {
     unsigned int delta = 1;
     unsigned int max = start + delta;
 
-    while (max < r && table[max][column] <= target) {
+    while (max < r && table[max] <= target) {
         delta *= 2;
         max = start + delta;
     }
 
-    return pred2D(target, table, column, start + (delta / 2), max, r);
+    return pred2D(target, table, start + (delta / 2), max, r);
 }
 
-unsigned int pred2D(unsigned int target, unsigned int **array, unsigned int column, unsigned int low, unsigned int high, int r) {
+unsigned int pred2D(unsigned int target, unsigned int* array, unsigned int low, unsigned int high, int r) {
     unsigned int mid = (low + high + 1) / 2;
     while (low != high && mid < r) {
         mid = (low + high + 1) / 2;
 
-        if (array[mid][column] <= target) {
+        if (array[mid] <= target) {
             low = mid;
         } else {
             high = mid - 1;
@@ -230,60 +239,60 @@ unsigned int pred2D(unsigned int target, unsigned int **array, unsigned int colu
     return low;
 }
 
-void updateRow(const std::string& text, unsigned int prevLetter, unsigned int** table2, unsigned int& currj, unsigned int& currl, unsigned int& currq, unsigned int& currSA, int r) {
+void updateRow(const std::string& text, unsigned int prevLetter, MONI_Table tableMONI, unsigned int& currj, unsigned int& currl, unsigned int& currq, unsigned int& currSA, int r) {
     unsigned int upperBoundary = currj-1;
     unsigned int lowerBoundary = currj+1;
 
-    while (upperBoundary < lowerBoundary && table2[upperBoundary][4] != prevLetter) {
+    while (upperBoundary < lowerBoundary && tableMONI.BWT_head[upperBoundary] != prevLetter) {
         upperBoundary--;
     }
 
-    while (lowerBoundary < r && table2[lowerBoundary][4] != prevLetter) {
+    while (lowerBoundary < r && tableMONI.BWT_head[lowerBoundary] != prevLetter) {
         lowerBoundary++;
     }
 
-    int lUpper = (upperBoundary < lowerBoundary) ? LCE(text, currSA, table2[upperBoundary][3]) : -1;
-    int lLower = (lowerBoundary < r) ? LCE(text, currSA, table2[lowerBoundary][1]) : -1;
+    int lUpper = (upperBoundary < lowerBoundary) ? LCE(text, currSA, tableMONI.SA_tail[upperBoundary]) : -1;
+    int lLower = (lowerBoundary < r) ? LCE(text, currSA, tableMONI.SA_head[lowerBoundary]) : -1;
 
     if (lUpper > lLower) {
         currj = upperBoundary;
         currl = currl < lUpper ? currl : lUpper;
-        currq = table2[currj][2];
-        currSA = table2[currj][3];
+        currq = tableMONI.tail[currj];
+        currSA = tableMONI.SA_tail[currj];
     } else {
         currj = lowerBoundary;
         currl = currl < lLower ? currl : lLower;
-        currq = table2[currj][0];
-        currSA = table2[currj][1];
+        currq = tableMONI.head[currj];
+        currSA = tableMONI.SA_head[currj];
     }
 }
 
-unsigned int phi(unsigned int** table3, unsigned int& currRow, unsigned int currSA, int r) {
-    unsigned int newSA =  table3[currRow][1] + currSA - table3[currRow][0];
-    currRow = exponentialSearch(table3, 0, table3[currRow][3], newSA, r);
+unsigned int phi(Phi_Table tablePhi, unsigned int& currRow, unsigned int currSA, int r) {
+    unsigned int newSA =  tablePhi.SA_tail[currRow] + currSA - tablePhi.SA_head[currRow];
+    currRow = exponentialSearch(tablePhi.SA_head, tablePhi.finger[currRow], newSA, r);
 
     return newSA;
 }
 
-unsigned int inversePhi(unsigned int** table4, unsigned int& currRow, unsigned int currSA, int r) {
-    unsigned int newSA = table4[currRow][0] + currSA - table4[currRow][1];
-    currRow = exponentialSearch(table4, 1, table4[currRow][2], newSA, r);
+unsigned int inversePhi(Inverse_Phi_Table tableInversePhi, unsigned int& currRow, unsigned int currSA, int r) {
+    unsigned int newSA = tableInversePhi.SA_head[currRow] + currSA - tableInversePhi.SA_tail[currRow];
+    currRow = exponentialSearch(tableInversePhi.SA_tail, tableInversePhi.finger[currRow], newSA, r);
 
     return newSA;
 }
-unsigned int LCPStep(unsigned int** table3, unsigned int currRow, unsigned int currSA) {
-    unsigned int lcp = (table3[currRow][2] + table3[currRow][0]) < currSA ? 0 : table3[currRow][2] + table3[currRow][0] - currSA;
+unsigned int LCPStep(Phi_Table tablePhi, unsigned int currRow, unsigned int currSA) {
+    unsigned int lcp = (tablePhi.LCP_head[currRow] + tablePhi.SA_head[currRow]) < currSA ? 0 : tablePhi.LCP_head[currRow] + tablePhi.SA_head[currRow] - currSA;
     return lcp;
 }
 
-unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigned int** table4, int r, sdsl::wt_blcd<>& wtBlcd, const std::string& pattern, const std::string& text, int k, int n) {
+unsigned int** preCalcMONI(MONI_Table tableMONI, Phi_Table table3, Inverse_Phi_Table table4, int r, sdsl::wt_blcd<>& wtBlcd, const std::string& pattern, const std::string& text, int k, int n) {
     unsigned int p_n = pattern.length();
 
     unsigned int startj;
     auto lastLetter = (unsigned int) pattern[p_n - 1];
 
     for (startj = 0; startj < r; startj++) {
-        if (table2[startj][4] == lastLetter) {
+        if (tableMONI.BWT_head[startj] == lastLetter) {
             break;
         }
     }
@@ -294,8 +303,8 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
     unsigned int curri = p_n;
     unsigned int currj = startj;
     unsigned int currl = 0;
-    unsigned int currq = table2[currj][0];
-    unsigned int currSA = table2[currj][1];
+    unsigned int currq = tableMONI.head[currj];
+    unsigned int currSA = tableMONI.SA_head[currj];
     unsigned int currL;
     unsigned int currs;
     unsigned int offset;
@@ -304,10 +313,10 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
 
     currl++;
     curri--;
-    LFStep(table2, currj, currq, currSA, wtBlcd, r);
+    LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
 
-    currL = table2[currj][10];
-    offset = table2[currj][9];
+    currL = tableMONI.L[currj];
+    offset = tableMONI.offset[currj];
     currs = currq - offset;
 
     moniKTable[0] = (unsigned int*) calloc(8, sizeof(int));
@@ -329,15 +338,15 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
         unsigned int LFs = currs;
 
         for (int j = 0; j <= n && j < k; j++) {
-            if (LFj + 1 < r && LFs >= table2[LFj+1][0]) {
+            if (LFj + 1 < r && LFs >= tableMONI.head[LFj+1]) {
                 LFj++;
             }
-            BWTArrays[i][j] = (char) table2[LFj][4];
+            BWTArrays[i][j] = (char) tableMONI.BWT_head[LFj];
             LFs++;
         }
 
         auto prevLetter = (unsigned int) pattern[curri-1];
-        if (table2[currj][4] == prevLetter && (currj == (r-1) || currs + 2 < table2[currj+1][0])) {
+        if (tableMONI.BWT_head[currj] == prevLetter && (currj == (r-1) || currs + 2 < tableMONI.head[currj+1])) {
             moniKTable[i][0] = currq;
             moniKTable[i][1] = currl;
             moniKTable[i][2] = currL;
@@ -350,18 +359,18 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
             std::cout << moniKTable[i][4] << "\t";
             std::cout << currs << std::endl;
 
-            int pi = wtBlcd.rank(currj, (char) table2[currj][4]) + std::get<1>(wtBlcd.lex_smaller_count(r, (char) table2[currj][4]));
-            currs = table2[pi][5] + currs - table2[currj][0];
+            int pi = wtBlcd.rank(currj, (char) tableMONI.BWT_head[currj]) + std::get<1>(wtBlcd.lex_smaller_count(r, (char) tableMONI.BWT_head[currj]));
+            currs = tableMONI.mu[pi] + currs - tableMONI.head[currj];
 
             currl++;
             currL++;
             curri--;
-            LFStep(table2, currj, currq, currSA, wtBlcd, r);
+            LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
         } else {
             oldl = currl;
-            if (table2[currj][4] != prevLetter) {
+            if (tableMONI.BWT_head[currj] != prevLetter) {
                 moniKTable[i][4] = currl < currL ? currl : currL;
-                updateRow(text, prevLetter, table2, currj, currl, currq, currSA, r);
+                updateRow(text, prevLetter, tableMONI, currj, currl, currq, currSA, r);
 //                MONIReset = true;
             } else {
                 unsigned int b = currs;
@@ -370,13 +379,13 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
                     b++;
                 }
 
-                int lce = LCE(text, currSA, table2[currj-1][3]);
+                int lce = LCE(text, currSA, tableMONI.SA_tail[currj-1]);
                 currl = lce < currl ? lce : currl;
                 moniKTable[i][4] = currl < currL ? currl : currL;
                 currq = b;
             }
 
-            currL = table2[currj][10];
+            currL = tableMONI.L[currj];
 
 //            if (MONIReset) {
 //                moniKTable[i][4] = oldl < currL ? oldl : currL;
@@ -397,9 +406,9 @@ unsigned int** preCalcMONI(unsigned int** table2, unsigned int** table3, unsigne
             currl++;
             curri--;
 
-            offset = table2[currj][9];
+            offset = tableMONI.offset[currj];
 
-            LFStep(table2, currj, currq, currSA, wtBlcd, r);
+            LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
 
             currs = currq - offset;
         }

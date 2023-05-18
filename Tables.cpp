@@ -7,7 +7,7 @@
 
 #include "Tables.h"
 
-MONI_Table::MONI_Table(const std::string &fileName, int r) {
+MONI_Table::MONI_Table(const std::string &fileName, int r, bool kConstruction) {
     head = (unsigned int*) calloc(r, sizeof(int));
     SA_head = (unsigned int*) calloc(r, sizeof(int));
     tail = (unsigned int*) calloc(r, sizeof(int));
@@ -25,6 +25,15 @@ MONI_Table::MONI_Table(const std::string &fileName, int r) {
     input.read((char*) BWT_head, r * sizeof(int));
     input.read((char*) mu, r * sizeof(int));
     input.read((char*) finger, r * sizeof(int));
+
+    if (kConstruction) {
+        offset = (unsigned int*) calloc(r, sizeof(int));
+        L = (unsigned int*) calloc(r, sizeof(int));
+        input.read((char*) offset, r * sizeof(int));
+        input.read((char*) L, r * sizeof(int));
+    }
+
+    input.close();
 }
 
 Phi_Table::Phi_Table(const std::string & fileName, int r) {
@@ -39,6 +48,8 @@ Phi_Table::Phi_Table(const std::string & fileName, int r) {
     input.read((char*) SA_tail, r * sizeof(int));
     input.read((char*) LCP_head, r * sizeof(int));
     input.read((char*) finger, r * sizeof(int));
+
+    input.close();
 }
 
 Inverse_Phi_Table::Inverse_Phi_Table(const std::string & fileName, int r) {
@@ -51,4 +62,6 @@ Inverse_Phi_Table::Inverse_Phi_Table(const std::string & fileName, int r) {
     input.read((char*) SA_head, r * sizeof(int));
     input.read((char*) SA_tail, r * sizeof(int));
     input.read((char*) finger, r * sizeof(int));
+
+    input.close();
 }

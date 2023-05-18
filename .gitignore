@@ -4,7 +4,7 @@ program
 *.txt
 *Table[0-9]*
 table*
-*_Summary
+*_Summary*
 TempCMake
 /test_TestBin
 /testtestBin

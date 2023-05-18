@@ -17,8 +17,10 @@ public:
     unsigned int* BWT_head;
     unsigned int* mu;
     unsigned int* finger;
+    unsigned int* offset;
+    unsigned int* L;
 
-    MONI_Table(const std::string&, int);
+    MONI_Table(const std::string&, int, bool);
 };
 
 class Phi_Table {

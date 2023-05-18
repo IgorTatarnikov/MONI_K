@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     bool kConstruction = true;
     int k = 3;
 
-    int table2NumColumns = TABLE2NUMCOLUMNS;
+    int table2NumColumns = kConstruction ? TABLE2NUMCOLUMNS : TABLE2NUMCOLUMNS - 2;
     int table3NumColumns = TABLE3NUMCOLUMNS;
     int table4NumColumns = TABLE4NUMCOLUMNS;
 
@@ -119,11 +119,8 @@ int main(int argc, char** argv) {
                 }
             }
 
-            table2[7][i] = offset_head;
-            table2[8][i] = L_head;
-
-            table2[9][i] = offset_tail;
-            table2[10][i] = L_tail;
+            table2[7][i] = offset_tail;
+            table2[8][i] = L_tail;
         }
     }
 
@@ -161,16 +158,10 @@ int main(int argc, char** argv) {
 
 
     std::cout << "Writing to file" << std::endl;
-    std::ofstream summaryFile(file_name.substr(0,file_name.length()-4) + "_Summary");
+    std::ofstream summaryFile(file_name.substr(0,file_name.length()-4) + "_Summary_Bin");
     auto table2File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table2MONI_Bin", std::ios::out | std::ios::binary);
     auto table3File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table3MONI_Bin", std::ios::out | std::ios::binary);
     auto table4File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table4MONI_Bin", std::ios::out | std::ios::binary);
-    auto tableTest = std::fstream(file_name.substr(0,file_name.length()-4) + "_TestBin", std::ios::out | std::ios::binary);
-
-    tableTest.write((char*)&n, sizeof(int));
-    tableTest.write((char*)&r, sizeof(int));
-
-    tableTest.close();
 
     summaryFile << n << "\t" << r << std::endl;
 
@@ -182,12 +173,15 @@ int main(int argc, char** argv) {
 
     table2File.close();
 
-    for (int i = 0; i < r; i++) {
-        for (int j = 0; j < table3NumColumns; j++) {
-            table3File.write((char*)&table3[i][j], sizeof(int));
-        }
 
-        for (int j = 0; j < table4NumColumns; j++) {
+    for (int j = 0; j < table3NumColumns; j++) {
+        for (int i = 0; i < r; i++) {
+            table3File.write((char *) &table3[i][j], sizeof(int));
+        }
+    }
+
+    for (int j = 0; j < table4NumColumns; j++) {
+        for (int i = 0; i < r; i++) {
             table4File.write((char*)&table4[i][j], sizeof(int));
         }
     }
