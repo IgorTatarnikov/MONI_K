@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     tableMONI[3][r - 1] = csa[tableMONI[2][r - 1]];
     tableMONI[4][r - 1] = csa.lf[tableMONI[0][r - 1]];
 
-    //Calculating the offset and L values for the tail of each run only if kConstruction is true
+    //Calculating the offset_tail and L_tail values for the tail of each run only if kConstruction is true
     if (kConstruction) {
         unsigned int LCPMin;
         unsigned short L_tail;
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
                 }
             }
 
-            //Record the offset and L
+            //Record the offset_tail and L_tail
             preCalcK[0][i] = offset_tail;
             preCalcK[1][i] = L_tail;
 
