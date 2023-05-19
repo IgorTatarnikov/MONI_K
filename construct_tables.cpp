@@ -13,14 +13,14 @@ int main(int argc, char** argv) {
     std::string file_name;
     std::getline(std::cin, file_name);
 
-    bool kConstruction = true;
+    bool kConstruction = KCONSTRUCTION;
     int k = 3;
 
-    int table2NumColumns = kConstruction ? TABLE2NUMCOLUMNS : TABLE2NUMCOLUMNS - 2;
+    int table2NumColumns = TABLE2NUMCOLUMNS - 3;
     int table3NumColumns = TABLE3NUMCOLUMNS;
     int table4NumColumns = TABLE4NUMCOLUMNS;
 
-    sdsl::csa_bitcompressed<> csa;
+    sdsl::csa_wt<> csa;
     sdsl::lcp_bitcompressed<> lcp;
 
     unsigned int n = constructDataStructures(&csa, &lcp, file_name);
@@ -39,76 +39,70 @@ int main(int argc, char** argv) {
     auto** table2 = (unsigned int**) calloc(table2NumColumns, sizeof(unsigned int*));
     auto** table3 = (unsigned int**) calloc(r, sizeof(unsigned int*));
     auto** table4 = (unsigned int**) calloc(r, sizeof(unsigned int*));
+    auto* BWTHeads = (char*) calloc(r, sizeof(char));
+    auto** preCalcK = (unsigned short**) calloc(2, sizeof(unsigned short*));
 
     for (int i = 0; i < table2NumColumns; i++) {
         table2[i] = (unsigned int*) calloc(r, sizeof(*table2[i]));
     }
 
+    preCalcK[0] = (unsigned short*) calloc(r, sizeof(*preCalcK[0]));
+    preCalcK[1] = (unsigned short*) calloc(r, sizeof(*preCalcK[1]));
+
     unsigned int curr_head;
+
+    unsigned int breakpoint = r / 20;
 
     std::cout << "Filling table 2 part 1" << std::endl;
     for (int i = 0; i < r; i++) {
         curr_head = run_heads[i];
         table2[0][i] = curr_head;
         table2[1][i] = csa[curr_head];
-        table2[4][i] = (unsigned int) csa.bwt[curr_head];
+        BWTHeads[i] = csa.bwt[curr_head];
+
+        if (breakpoint && (i % breakpoint == 0)) {
+            std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+        }
     }
 
     std::cout << "Filling table 2 part 2" << std::endl;
     for (int i = 0; i < r-1; i++) {
         table2[2][i] = (table2[0][(i + r + 1) % r] + n - 1) % n;
         table2[3][i] = csa[table2[2][i]];
-        table2[5][i] = csa.lf[table2[0][i]];
+        table2[4][i] = csa.lf[table2[0][i]];
+
+        if (breakpoint && (i % breakpoint == 0)) {
+            std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+        }
     }
 
     table2[2][r-1] = n;
     table2[3][r-1] = csa[table2[2][r-1]];
-    table2[5][r-1] = csa.lf[table2[0][r-1]];
+    table2[4][r-1] = csa.lf[table2[0][r-1]];
 
 
     unsigned int LCPMin;
-    unsigned int L_head;
-    unsigned int offset_head;
-    unsigned int L_tail;
-    unsigned int offset_tail;
-    unsigned int start_head;
-    unsigned int max_head;
+    unsigned short L_tail;
+    unsigned short offset_tail;
     unsigned int start_tail;
     unsigned int max_tail;
     int totalSpan = 2 * k - 2;
     int windowSize = k - 1;
-    auto* tempLCPStoreHead = (unsigned int*) calloc(totalSpan, sizeof(unsigned int));
     auto* tempLCPStoreTail = (unsigned int*) calloc(totalSpan, sizeof(unsigned int));
 
     if (kConstruction) {
         for (int i = 0; i < r; i++) {
             // n+1 accounts for the $ sign added by sdsl
-            start_head = (csa.lf[table2[0][i]] >= (k - 2)) ? csa.lf[table2[0][i]] - k + 2 : 0;
-            max_head = (csa.lf[table2[0][i]] + k) < n + 1 ? csa.lf[table2[0][i]] + k : n + 1;
             start_tail = (csa.lf[table2[2][i]] >= (k - 2)) ? csa.lf[table2[2][i]] - k + 2 : 0;
             max_tail = (csa.lf[table2[2][i]] + k) < n + 1 ? csa.lf[table2[2][i]] + k : n + 1;
 
-            unsigned int total_head = max_head - start_head;
             unsigned int total_tail = max_tail - start_tail;
-            L_head = 0;
-            offset_head = 0;
+
             L_tail = 0;
             offset_tail = 0;
 
-            for (unsigned int j = start_head; j < max_head; j++) {
-                tempLCPStoreHead[j - start_head] = lcp[j];
-            }
-
             for (unsigned int j = start_tail; j < max_tail; j++) {
                 tempLCPStoreTail[j - start_tail] = lcp[j];
-            }
-
-            for (int j = 0; j < total_head - 1; j++) {
-                LCPMin = *std::min_element(tempLCPStoreHead + j, tempLCPStoreHead + windowSize + j);
-                if (LCPMin > L_head) {
-                    L_head = LCPMin;
-                    offset_head = windowSize - j;
-                }
             }
 
             for (int j = 0; j < total_tail - 1; j++) {
@@ -119,17 +113,25 @@ int main(int argc, char** argv) {
                 }
             }
 
-            table2[7][i] = offset_tail;
-            table2[8][i] = L_tail;
+            preCalcK[0][i] = offset_tail;
+            preCalcK[1][i] = L_tail;
+
+            if (breakpoint && (i % breakpoint == 0)) {
+                std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+            }
         }
     }
 
     std::cout << "Sorting table 2" << std::endl;
-    qsort(table2[5], r, sizeof(int), rowComp);
+    qsort(table2[4], r, sizeof(int), rowComp);
 
     std::cout << "Predecessor table 2" << std::endl;
     for (int i = 0; i < r; i++) {
-        table2[6][i] = pred(table2[5][i], table2[0], r, 1);
+        table2[5][i] = pred(table2[4][i], table2[0], r, 1);
+
+        if (breakpoint && (i % breakpoint == 0)) {
+            std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+        }
     }
 
     std::cout << "Filling table 3 and 4" << std::endl;
@@ -142,6 +144,10 @@ int main(int argc, char** argv) {
         table4[i] = (unsigned int*) calloc(table4NumColumns, sizeof(*table4[i]));
         table4[i][0] = table3[i][0];
         table4[i][1] = table3[i][1];
+
+        if (breakpoint && (i % breakpoint == 0)) {
+            std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+        }
     }
 
     std::cout << "Sorting table 3" << std::endl;
@@ -154,6 +160,10 @@ int main(int argc, char** argv) {
     for (int i = 0; i < r; i++) {
         table3[i][3] = pred2D(table3[i][1], table3, 0, r);
         table4[i][2] = pred2D(table4[i][0], table4, 1, r);
+
+        if (breakpoint && (i % breakpoint == 0)) {
+            std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
+        }
     }
 
 
@@ -170,6 +180,10 @@ int main(int argc, char** argv) {
     for (int i = 0; i < table2NumColumns; i++) {
         table2File.write((char*)table2[i], r * sizeof(int));
     }
+
+    table2File.write((char*) BWTHeads, r);
+    table2File.write((char*) preCalcK[0], r * sizeof(*preCalcK[0]));
+    table2File.write((char*) preCalcK[1], r * sizeof(*preCalcK[1]));
 
     table2File.close();
 
@@ -192,7 +206,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-unsigned int constructDataStructures(sdsl::csa_bitcompressed<>* csa, sdsl::lcp_bitcompressed<>* lcp, const std::string& file_name) {
+unsigned int constructDataStructures(sdsl::csa_wt<>* csa, sdsl::lcp_bitcompressed<>* lcp, const std::string& file_name) {
     std::ifstream input_file(file_name);
     std::stringstream buffer;
     std::cout << "Reading the input file" << std::endl;
@@ -200,6 +214,8 @@ unsigned int constructDataStructures(sdsl::csa_bitcompressed<>* csa, sdsl::lcp_b
 
     std::string text = buffer.str();
     unsigned int n = text.length();
+
+    sdsl::cache_config cc(true);
 
     std::cout << "Building the BWT" << std::endl;
     construct_im(*csa, text, 1);

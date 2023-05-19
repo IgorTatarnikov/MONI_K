@@ -10,10 +10,11 @@
 #define TABLE3NUMCOLUMNS 4
 #define TABLE4NUMCOLUMNS 3
 #define STRING_SEPARATOR '#'
+#define KCONSTRUCTION true
 
 unsigned int** readTable(const std::string&, int, int);
 int LCE(const std::string&, unsigned int, unsigned int);
-void updateRow(const std::string&, unsigned int, MONI_Table, unsigned int&, unsigned int&, unsigned int&, unsigned int&, int);
+void updateRow(const std::string&, char, MONI_Table, unsigned int&, unsigned int&, unsigned int&, unsigned int&, int);
 void LFStep(MONI_Table, unsigned int&, unsigned int&, unsigned int&, sdsl::wt_blcd<>&, int);
 unsigned int exponentialSearch(unsigned int*, unsigned int, unsigned int, int);
 unsigned int pred2D(unsigned int, unsigned int*, unsigned int, unsigned int, int);

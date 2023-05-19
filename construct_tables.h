@@ -11,6 +11,6 @@ int rowCompArrayFirstElem(const void*, const void*);
 int rowCompArraySecondElem(const void*, const void*);
 unsigned int pred(unsigned int, const unsigned int*, int, int);
 unsigned int pred2D(unsigned int, unsigned int**, int, int);
-unsigned int constructDataStructures(sdsl::csa_bitcompressed<> *, sdsl::lcp_bitcompressed<> *, const std::string&);
+unsigned int constructDataStructures(sdsl::csa_wt<> *, sdsl::lcp_bitcompressed<> *, const std::string&);
 
 #endif //MONI_K_CONSTRUCT_TABLES_H
