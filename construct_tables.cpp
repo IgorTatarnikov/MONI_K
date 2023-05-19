@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
     sdsl::csa_wt<> csa;
     sdsl::lcp_bitcompressed<> lcp;
 
+    //Construct the data structures given the file name
     unsigned int n = constructDataStructures(&csa, &lcp, file_name);
 
     std::cout << "Finding the run heads" << std::endl;
@@ -36,65 +37,62 @@ int main(int argc, char** argv) {
         }
     }
 
-    auto** table2 = (unsigned int**) calloc(table2NumColumns, sizeof(unsigned int*));
-    auto** table3 = (unsigned int**) calloc(r, sizeof(unsigned int*));
-    auto** table4 = (unsigned int**) calloc(r, sizeof(unsigned int*));
+    //Filling the MONI table based on the BWT and LCP data structures
+    auto** tableMONI = (unsigned int**) calloc(table2NumColumns, sizeof(unsigned int*));
     auto* BWTHeads = (char*) calloc(r, sizeof(char));
     auto** preCalcK = (unsigned short**) calloc(2, sizeof(unsigned short*));
 
     for (int i = 0; i < table2NumColumns; i++) {
-        table2[i] = (unsigned int*) calloc(r, sizeof(*table2[i]));
+        tableMONI[i] = (unsigned int*) calloc(r, sizeof(*tableMONI[i]));
     }
 
     preCalcK[0] = (unsigned short*) calloc(r, sizeof(*preCalcK[0]));
     preCalcK[1] = (unsigned short*) calloc(r, sizeof(*preCalcK[1]));
 
-    unsigned int curr_head;
-
+    //Breakpoint used to keep track of the progress of the table construction
     unsigned int breakpoint = r / 20;
 
-    std::cout << "Filling table 2 part 1" << std::endl;
+    std::cout << "Filling MONI table with the head and SA head values" << std::endl;
     for (int i = 0; i < r; i++) {
-        curr_head = run_heads[i];
-        table2[0][i] = curr_head;
-        table2[1][i] = csa[curr_head];
-        BWTHeads[i] = csa.bwt[curr_head];
+        tableMONI[0][i] = run_heads[i];
+        tableMONI[1][i] = csa[run_heads[i]];
+        BWTHeads[i] = csa.bwt[run_heads[i]];
 
         if (breakpoint && (i % breakpoint == 0)) {
             std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
         }
     }
 
-    std::cout << "Filling table 2 part 2" << std::endl;
+    std::cout << "Filling MONI table with tail, SA tail, and mu values" << std::endl;
     for (int i = 0; i < r-1; i++) {
-        table2[2][i] = (table2[0][(i + r + 1) % r] + n - 1) % n;
-        table2[3][i] = csa[table2[2][i]];
-        table2[4][i] = csa.lf[table2[0][i]];
+        tableMONI[2][i] = (tableMONI[0][(i + r + 1) % r] + n - 1) % n;
+        tableMONI[3][i] = csa[tableMONI[2][i]];
+        tableMONI[4][i] = csa.lf[tableMONI[0][i]];
 
         if (breakpoint && (i % breakpoint == 0)) {
             std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
         }
     }
 
-    table2[2][r-1] = n;
-    table2[3][r-1] = csa[table2[2][r-1]];
-    table2[4][r-1] = csa.lf[table2[0][r-1]];
+    tableMONI[2][r - 1] = n;
+    tableMONI[3][r - 1] = csa[tableMONI[2][r - 1]];
+    tableMONI[4][r - 1] = csa.lf[tableMONI[0][r - 1]];
 
-
-    unsigned int LCPMin;
-    unsigned short L_tail;
-    unsigned short offset_tail;
-    unsigned int start_tail;
-    unsigned int max_tail;
-    int totalSpan = 2 * k - 2;
-    int windowSize = k - 1;
-    auto* tempLCPStoreTail = (unsigned int*) calloc(totalSpan, sizeof(unsigned int));
-
+    //Calculating the offset and L values for the tail of each run only if kConstruction is true
     if (kConstruction) {
+        unsigned int LCPMin;
+        unsigned short L_tail;
+        unsigned short offset_tail;
+        unsigned int start_tail;
+        unsigned int max_tail;
+        int totalSpan = 2 * k - 2;
+        int windowSize = k - 1;
+        auto* tempLCPStoreTail = (unsigned int*) calloc(totalSpan, sizeof(unsigned int));
+
         for (int i = 0; i < r; i++) {
             // n+1 accounts for the $ sign added by sdsl
-            start_tail = (csa.lf[table2[2][i]] >= (k - 2)) ? csa.lf[table2[2][i]] - k + 2 : 0;
-            max_tail = (csa.lf[table2[2][i]] + k) < n + 1 ? csa.lf[table2[2][i]] + k : n + 1;
+            start_tail = (csa.lf[tableMONI[2][i]] >= (k - 2)) ? csa.lf[tableMONI[2][i]] - k + 2 : 0;
+            max_tail = (csa.lf[tableMONI[2][i]] + k) < n + 1 ? csa.lf[tableMONI[2][i]] + k : n + 1;
 
             unsigned int total_tail = max_tail - start_tail;
 
@@ -105,6 +103,7 @@ int main(int argc, char** argv) {
                 tempLCPStoreTail[j - start_tail] = lcp[j];
             }
 
+            //Finding the maximum minimum LCP value in a k-1 window across the range of (q - k + 2) to (q + k - 1)
             for (int j = 0; j < total_tail - 1; j++) {
                 LCPMin = *std::min_element(tempLCPStoreTail + j, tempLCPStoreTail + windowSize + j);
                 if (LCPMin > L_tail) {
@@ -113,6 +112,7 @@ int main(int argc, char** argv) {
                 }
             }
 
+            //Record the offset and L
             preCalcK[0][i] = offset_tail;
             preCalcK[1][i] = L_tail;
 
@@ -122,86 +122,95 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout << "Sorting table 2" << std::endl;
-    qsort(table2[4], r, sizeof(int), rowComp);
+    std::cout << "Sorting the mu values" << std::endl;
+    qsort(tableMONI[4], r, sizeof(int), rowComp);
 
-    std::cout << "Predecessor table 2" << std::endl;
+    std::cout << "Finding the finger values for the MONI table by running a predecessor query" << std::endl;
     for (int i = 0; i < r; i++) {
-        table2[5][i] = pred(table2[4][i], table2[0], r, 1);
+        tableMONI[5][i] = pred(tableMONI[4][i], tableMONI[0], r, 1);
 
         if (breakpoint && (i % breakpoint == 0)) {
             std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
         }
     }
 
-    std::cout << "Filling table 3 and 4" << std::endl;
-    for (int i = 0; i < r; i++) {
-        table3[i] = (unsigned int*) calloc(table3NumColumns, sizeof(*table3[i]));
-        table3[i][0] = table2[1][i];
-        table3[i][1] = table2[3][(i+r-1) % r];
-        table3[i][2] = lcp[table2[0][i]];
+    std::cout << "Filling phi and inverse phi tables" << std::endl;
+    auto** tablePhi = (unsigned int**) calloc(r, sizeof(unsigned int*));
+    auto** tableInversePhi = (unsigned int**) calloc(r, sizeof(unsigned int*));
 
-        table4[i] = (unsigned int*) calloc(table4NumColumns, sizeof(*table4[i]));
-        table4[i][0] = table3[i][0];
-        table4[i][1] = table3[i][1];
+    for (int i = 0; i < r; i++) {
+        tablePhi[i] = (unsigned int*) calloc(table3NumColumns, sizeof(*tablePhi[i]));
+        tableInversePhi[i] = (unsigned int*) calloc(table4NumColumns, sizeof(*tableInversePhi[i]));
+
+        //Grabbing the SA head value from the MONI table
+        tablePhi[i][0] = tableMONI[1][i];
+        tableInversePhi[i][0] = tableMONI[1][i];
+
+        //Grabbing the SA tail value from the MONI table (the SA value immediately preceding the head in the MONI table)
+        tablePhi[i][1] = tableMONI[3][(i + r - 1) % r];
+        tableInversePhi[i][1] = tablePhi[i][1];
+
+        tablePhi[i][2] = lcp[tableMONI[0][i]];
 
         if (breakpoint && (i % breakpoint == 0)) {
             std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
         }
     }
 
-    std::cout << "Sorting table 3" << std::endl;
-    qsort(table3, r, sizeof(*table3), rowCompArrayFirstElem);
+    //Sorting the phi table based on the SA head values
+    std::cout << "Sorting phi table" << std::endl;
+    qsort(tablePhi, r, sizeof(*tablePhi), rowCompArrayFirstElem);
 
-    std::cout << "Sorting table 4" << std::endl;
-    qsort(table4, r, sizeof(*table4), rowCompArraySecondElem);
+    //Sorting the inverse phi table based on the SA tail values
+    std::cout << "Sorting inverse phi table" << std::endl;
+    qsort(tableInversePhi, r, sizeof(*tableInversePhi), rowCompArraySecondElem);
 
-    std::cout << "Predecessor table 3 and 4" << std::endl;
+    std::cout << "Predecessor to fill finger column in phi and inverse phi tables" << std::endl;
     for (int i = 0; i < r; i++) {
-        table3[i][3] = pred2D(table3[i][1], table3, 0, r);
-        table4[i][2] = pred2D(table4[i][0], table4, 1, r);
+        tablePhi[i][3] = pred2D(tablePhi[i][1], tablePhi, 0, r);
+        tableInversePhi[i][2] = pred2D(tableInversePhi[i][0], tableInversePhi, 1, r);
 
         if (breakpoint && (i % breakpoint == 0)) {
             std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
         }
     }
 
-
+    //Summary file just contains the n and r values as ASCII characters
     std::cout << "Writing to file" << std::endl;
     std::ofstream summaryFile(file_name.substr(0,file_name.length()-4) + "_Summary_Bin");
-    auto table2File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table2MONI_Bin", std::ios::out | std::ios::binary);
-    auto table3File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table3MONI_Bin", std::ios::out | std::ios::binary);
-    auto table4File = std::fstream(file_name.substr(0,file_name.length()-4) + "_Table4MONI_Bin", std::ios::out | std::ios::binary);
+    auto tableMONIFile = std::fstream(file_name.substr(0, file_name.length() - 4) + "_MONITable_Bin", std::ios::out | std::ios::binary);
+    auto tablePhiFile = std::fstream(file_name.substr(0, file_name.length() - 4) + "_PhiTable_Bin", std::ios::out | std::ios::binary);
+    auto tableInversePhiFile = std::fstream(file_name.substr(0, file_name.length() - 4) + "_InversePhiTable_Bin", std::ios::out | std::ios::binary);
 
     summaryFile << n << "\t" << r << std::endl;
 
     summaryFile.close();
 
     for (int i = 0; i < table2NumColumns; i++) {
-        table2File.write((char*)table2[i], r * sizeof(int));
+        tableMONIFile.write((char*)tableMONI[i], r * sizeof(int));
     }
 
-    table2File.write((char*) BWTHeads, r);
-    table2File.write((char*) preCalcK[0], r * sizeof(*preCalcK[0]));
-    table2File.write((char*) preCalcK[1], r * sizeof(*preCalcK[1]));
+    tableMONIFile.write((char*) BWTHeads, r);
+    tableMONIFile.write((char*) preCalcK[0], r * sizeof(*preCalcK[0]));
+    tableMONIFile.write((char*) preCalcK[1], r * sizeof(*preCalcK[1]));
 
-    table2File.close();
+    tableMONIFile.close();
 
 
     for (int j = 0; j < table3NumColumns; j++) {
         for (int i = 0; i < r; i++) {
-            table3File.write((char *) &table3[i][j], sizeof(int));
+            tablePhiFile.write((char *) &tablePhi[i][j], sizeof(int));
         }
     }
 
     for (int j = 0; j < table4NumColumns; j++) {
         for (int i = 0; i < r; i++) {
-            table4File.write((char*)&table4[i][j], sizeof(int));
+            tableInversePhiFile.write((char*)&tableInversePhi[i][j], sizeof(int));
         }
     }
 
-    table3File.close();
-    table4File.close();
+    tablePhiFile.close();
+    tableInversePhiFile.close();
 
     return 0;
 }
@@ -240,6 +249,7 @@ int rowCompArraySecondElem(const void *a, const void * b) {
     return (*((int**) a))[1] - (*((int**) b))[1];
 }
 
+//Predecessor query
 unsigned int pred(unsigned int target, const unsigned int *array, int num, int size) {
     int low = 0;
     int high = num - 1;
@@ -257,6 +267,7 @@ unsigned int pred(unsigned int target, const unsigned int *array, int num, int s
     return low;
 }
 
+//Predecessor query based on a specific column in a 2D array
 unsigned int pred2D(unsigned int target, unsigned int **array, int column, int num) {
     int low = 0;
     int high = num - 1;

@@ -21,6 +21,6 @@ unsigned int pred2D(unsigned int, unsigned int*, unsigned int, unsigned int, int
 unsigned int phi(Phi_Table, unsigned int&, unsigned int, int r);
 unsigned int inversePhi(Inverse_Phi_Table, unsigned int&, unsigned int, int r);
 unsigned int LCPStep(Phi_Table, unsigned int, unsigned int);
-unsigned int** preCalcMONI(MONI_Table, Phi_Table, Inverse_Phi_Table, int, sdsl::wt_blcd<>&, const std::string&, const std::string&, int, int);
+unsigned int** preCalcMONI(MONI_Table, unsigned int, int, sdsl::wt_blcd<>&, const std::string&, const std::string&, int, int);
 
 #endif //MONI_K_MONI_K_H
