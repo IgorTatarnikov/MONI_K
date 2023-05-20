@@ -12,6 +12,8 @@
 #define STRING_SEPARATOR '#'
 #define KCONSTRUCTION true
 
+
+
 unsigned int** readTable(const std::string&, int, int);
 int LCE(const std::string&, unsigned int, unsigned int);
 void updateRow(const std::string&, char, MONI_Table, unsigned int&, unsigned int&, unsigned int&, unsigned int&, int);
