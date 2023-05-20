@@ -9,34 +9,6 @@
 
 #include "MONI_K.h"
 
-
-std::vector<std::string> testPatterns =  {
-        "TAGATTACATTA",
-        "GGGCGTGACGGTGATC",
-        "CCTAGTGA",
-        "AGAGCCTCTC",
-        "ACTGTCGT",
-        "GCTTTAAATCC",
-        "GGAGCCAA",
-        "TAACCAATT",
-        "GTTTAGAGGTCAT",
-        "GTTGTTCAACT",
-        "GGCGCAGC",
-        "TAATGAGATCGTC",
-        "ATCAGCTTC",
-        "AGCGTACATC",
-        "GTACGGGGGCTG",
-        "TAATGCCTCGTAATC",
-        "AGGCTTGATG",
-        "CCAATTAGGGT",
-        "TTAAACACATCAGAT",
-        "CCGCGGGCAGCCCC",
-        "CGGCGTTCAATG",
-        "CTGATAAA",
-        "TACAATACATAGATTA",
-        "AAAAAAAAAA"
-};
-
 bool printMEMs = false;
 bool printTables = false;
 bool useTestFile = false;
@@ -62,8 +34,11 @@ int main(int argc, char** argv) {
 
     std::cout << "Use test patterns? (0/1)" << std::endl;
     std::cin >> useTestPatterns;
+    std::vector<std::string> testPatterns;
 
-    if (!useTestPatterns) {
+    if (useTestPatterns) {
+        testPatterns = readTestStrings("test_strings.txt");
+    } else {
         std::cout << "Please enter the pattern" << std::endl;
         std::string pattern;
         std::cin >> pattern;
@@ -111,9 +86,7 @@ int main(int argc, char** argv) {
     sdsl::wt_blcd<> wtBlcd;
     construct_im(wtBlcd, BWTHead, 1);
 
-//    std::cout << "Please enter a pattern:" << std::endl;
     std::string pattern;
-//    std::getline(std::cin, pattern);
 
     for(int index = 0; index < numExamples; index++) {
         pattern = testPatterns[index];
@@ -349,6 +322,21 @@ unsigned int LCPStep(Phi_Table tablePhi, unsigned int currRow, unsigned int curr
     return lcp;
 }
 
+//Reads strings from a file and returns a vector of strings
+std::vector<std::string> readTestStrings(const std::string& fileName) {
+    std::ifstream file(fileName);
+    std::vector<std::string> strings;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        strings.push_back(line);
+    }
+
+    file.close();
+
+    return strings;
+}
+
 unsigned int** preCalcMONI(MONI_Table tableMONI, unsigned int startj, int r, sdsl::wt_blcd<>& wtBlcd, const std::string& pattern, const std::string& text, int k, int n) {
     unsigned int p_n = pattern.length();
 
@@ -364,7 +352,6 @@ unsigned int** preCalcMONI(MONI_Table tableMONI, unsigned int startj, int r, sds
     unsigned int currL;
     unsigned int currs;
     unsigned int offset;
-    bool MONIReset = false;
 
     currL = tableMONI.L_head[currj];
     offset = tableMONI.offset_head[currj];
@@ -390,9 +377,7 @@ unsigned int** preCalcMONI(MONI_Table tableMONI, unsigned int startj, int r, sds
     LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
     currs = currq - offset;
 
-    for (int i = 1; i < p_n; i++) {
-//        LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
-
+    for (int i = 1; i <= p_n; i++) {
         BWTArrays[i] = (char*) calloc(k, sizeof(char));
         moniKTable[i] = (unsigned int*) calloc(8, sizeof(int));
 
@@ -420,52 +405,67 @@ unsigned int** preCalcMONI(MONI_Table tableMONI, unsigned int startj, int r, sds
             LFs++;
         }
 
-        auto prevLetter = pattern[curri-1];
-        if (tableMONI.BWT_head[tempj] == prevLetter && (tempj == (r-1) || currs + 2 < tableMONI.head[tempj+1])) {
-            int pi = wtBlcd.rank(tempj, tableMONI.BWT_head[tempj]) + std::get<1>(wtBlcd.lex_smaller_count(r, tableMONI.BWT_head[tempj]));
-            currs = tableMONI.mu[pi] + currs - tableMONI.head[tempj];
+        if (curri > 0) {
+            auto prevLetter = pattern[curri - 1];
+            if (tableMONI.BWT_head[tempj] == prevLetter &&
+                (tempj == (r - 1) || currs + 2 < tableMONI.head[tempj + 1])) {
+                int pi = wtBlcd.rank(tempj, tableMONI.BWT_head[tempj]) +
+                         std::get<1>(wtBlcd.lex_smaller_count(r, tableMONI.BWT_head[tempj]));
+                currs = tableMONI.mu[pi] + currs - tableMONI.head[tempj];
 
-            currl++;
-            currL++;
-            curri--;
-            LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
-        } else {
-            if (tableMONI.BWT_head[currj] != prevLetter) {
-                updateRow(text, prevLetter, tableMONI, currj, currl, currq, currSA, r);
-                moniKTable[i][1] = currl;
-                moniKTable[i][0] = currq;
+                currl++;
+                currL++;
+                curri--;
+                LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
             } else {
-                unsigned int b = currs;
+                if (tableMONI.BWT_head[currj] != prevLetter) {
+                    updateRow(text, prevLetter, tableMONI, currj, currl, currq, currSA, r);
+                    moniKTable[i][1] = currl;
+                    moniKTable[i][0] = currq;
+                } else {
+                    unsigned int b = currs;
 
-                while (BWTArrays[i][b - currs] == BWTArrays[i][b - currs + 1]) {
-                    b++;
+                    while (BWTArrays[i][b-currs] != prevLetter || BWTArrays[i][b - currs] == BWTArrays[i][b - currs + 1]) {
+                        b++;
+                    }
+
+                    int lce;
+
+                    if (b < tableMONI.head[currj]) {
+                        lce = LCE(text, currSA, tableMONI.SA_tail[tempj]);
+                    } else {
+                        lce = LCE(text, currSA, tableMONI.SA_tail[currj]);
+                    }
+
+
+                    currl = lce < currl ? lce : currl;
+                    currq = b;
                 }
 
-                int lce = LCE(text, currSA, tableMONI.SA_tail[currj]);
-                currl = lce < currl ? lce : currl;
-                currq = b;
-//                moniKTable[i][0] = currq;
+                currl++;
+                curri--;
+
+                if (tableMONI.head[currj] == currq) {
+                    currL = tableMONI.L_head[currj];
+                    offset = tableMONI.offset_head[currj];
+                } else if (currq < tableMONI.head[currj]) {
+                    currL = tableMONI.L_tail[tempj];
+                    offset = tableMONI.offset_tail[tempj];
+                } else {
+                    currL = tableMONI.L_tail[currj];
+                    offset = tableMONI.offset_tail[currj];
+                }
+
+                LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
+
+                currs = currq - offset;
             }
-
-            currl++;
-            curri--;
-
-            if (tableMONI.head[currj] == currq) {
-                currL = tableMONI.L_head[currj];
-                offset = tableMONI.offset_head[currj];
-            } else {
-                currL = tableMONI.L_tail[currj];
-                offset = tableMONI.offset_tail[currj];
-            }
-
-            LFStep(tableMONI, currj, currq, currSA, wtBlcd, r);
-
-            currs = currq - offset;
         }
 
 
         if (printTables) {
             std::cout << moniKTable[i][0] << "\t";
+            std::cout << currSA << "\t";
             std::cout << moniKTable[i][1] << "\t";
             std::cout << moniKTable[i][2] << "\t";
             std::cout << moniKTable[i][4] << "\t";
@@ -473,21 +473,6 @@ unsigned int** preCalcMONI(MONI_Table tableMONI, unsigned int startj, int r, sds
 
             std::cout << "[" << BWTArrays[i] << "]" << std::endl;
         }
-    }
-
-    moniKTable[p_n] = (unsigned int*) calloc(8, sizeof(int));
-    moniKTable[p_n][0] = currq;
-    moniKTable[p_n][1] = currl;
-    moniKTable[p_n][2] = currL;
-    moniKTable[p_n][3] = currs;
-    moniKTable[p_n][4] = currl < currL ? currl : currL;
-
-    if (printTables) {
-        std::cout << currq << "\t";
-        std::cout << currl << "\t";
-        std::cout << currL << "\t";
-        std::cout << moniKTable[p_n][4] << "\t";
-        std::cout << currs << std::endl;
     }
 
     return moniKTable;

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <sdsl/wt_blcd.hpp>
+#include <vector>
 
 #include "Tables.h"
 
@@ -12,9 +13,7 @@
 #define STRING_SEPARATOR '#'
 #define KCONSTRUCTION true
 
-
-
-unsigned int** readTable(const std::string&, int, int);
+std::vector<std::string> readTestStrings(const std::string& fileName);
 int LCE(const std::string&, unsigned int, unsigned int);
 void updateRow(const std::string&, char, MONI_Table, unsigned int&, unsigned int&, unsigned int&, unsigned int&, int);
 void LFStep(MONI_Table, unsigned int&, unsigned int&, unsigned int&, sdsl::wt_blcd<>&, int);
