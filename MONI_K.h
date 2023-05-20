@@ -18,10 +18,13 @@ int LCE(const std::string&, unsigned int, unsigned int);
 void updateRow(const std::string&, char, MONI_Table, unsigned int&, unsigned int&, unsigned int&, unsigned int&, int);
 void LFStep(MONI_Table, unsigned int&, unsigned int&, unsigned int&, sdsl::wt_blcd<>&, int);
 unsigned int exponentialSearch(unsigned int*, unsigned int, unsigned int, int);
-unsigned int pred2D(unsigned int, unsigned int*, unsigned int, unsigned int, int);
+unsigned int pred2D(unsigned int, const unsigned int*, unsigned int, unsigned int, int);
 unsigned int phi(Phi_Table, unsigned int&, unsigned int, int r);
 unsigned int inversePhi(Inverse_Phi_Table, unsigned int&, unsigned int, int r);
 unsigned int LCPStep(Phi_Table, unsigned int, unsigned int);
-unsigned int** preCalcMONI(MONI_Table, unsigned int, int, sdsl::wt_blcd<>&, const std::string&, const std::string&, int, int);
+void preCalcMONIK(unsigned int**, MONI_Table &tableMONI, unsigned int startj, int r, sdsl::wt_blcd<> &wtBlcd,
+                            const std::string &pattern, const std::string &text, int k, int n);
+void onlineMONIK(unsigned int**, MONI_Table&, Phi_Table&, Inverse_Phi_Table&, unsigned int, int,
+                           sdsl::wt_blcd<>&, const std::string&, const std::string&, int);
 
 #endif //MONI_K_MONI_K_H
