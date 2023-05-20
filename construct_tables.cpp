@@ -40,16 +40,15 @@ int main(int argc, char** argv) {
     //Filling the MONI table based on the BWT and LCP data structures
     auto** tableMONI = (unsigned int**) calloc(table2NumColumns, sizeof(unsigned int*));
     auto* BWTHeads = (char*) calloc(r, sizeof(char));
-    auto** preCalcK = (unsigned short**) calloc(4, sizeof(unsigned short*));
+    auto** preCalcK = (unsigned char**) calloc(4, sizeof(unsigned char*));
 
     for (int i = 0; i < table2NumColumns; i++) {
         tableMONI[i] = (unsigned int*) calloc(r, sizeof(*tableMONI[i]));
     }
 
-    preCalcK[0] = (unsigned short*) calloc(r, sizeof(*preCalcK[0]));
-    preCalcK[1] = (unsigned short*) calloc(r, sizeof(*preCalcK[1]));
-    preCalcK[2] = (unsigned short*) calloc(r, sizeof(*preCalcK[2]));
-    preCalcK[3] = (unsigned short*) calloc(r, sizeof(*preCalcK[3]));
+    for (int i = 0; i < 4; i++) {
+        preCalcK[i] = (unsigned char*) calloc(r, sizeof(*preCalcK[i]));
+    }
 
     //Breakpoint used to keep track of the progress of the table construction
     unsigned int breakpoint = r / 20;
@@ -83,13 +82,13 @@ int main(int argc, char** argv) {
     //Calculating the offset_tail and L_tail values for the tail of each run only if kConstruction is true
     if (kConstruction) {
         unsigned int LCPMin;
-        unsigned short L_head;
-        unsigned short offset_head;
+        unsigned char L_head;
+        unsigned char offset_head;
         unsigned int start_head;
         unsigned int max_head;
 
-        unsigned short L_tail;
-        unsigned short offset_tail;
+        unsigned char L_tail;
+        unsigned char offset_tail;
         unsigned int start_tail;
         unsigned int max_tail;
         int totalSpan = 2 * k - 2;
@@ -146,6 +145,9 @@ int main(int argc, char** argv) {
             if (breakpoint && (i % breakpoint == 0)) {
                 std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
             }
+
+//            free(tempLCPStoreHead);
+//            free(tempLCPStoreTail);
         }
     }
 
@@ -218,10 +220,10 @@ int main(int argc, char** argv) {
     }
 
     tableMONIFile.write((char*) BWTHeads, r);
-    tableMONIFile.write((char*) preCalcK[0], r * sizeof(*preCalcK[0]));
-    tableMONIFile.write((char*) preCalcK[1], r * sizeof(*preCalcK[1]));
-    tableMONIFile.write((char*) preCalcK[2], r * sizeof(*preCalcK[2]));
-    tableMONIFile.write((char*) preCalcK[3], r * sizeof(*preCalcK[3]));
+
+    for (int i = 0; i < 4; i++) {
+        tableMONIFile.write((char*) preCalcK[i], r * sizeof(*preCalcK[i]));
+    }
 
     tableMONIFile.close();
 

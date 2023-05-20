@@ -17,10 +17,10 @@ public:
     unsigned int* mu;
     unsigned int* finger;
     char* BWT_head;
-    unsigned short* offset_tail;
-    unsigned short* L_tail;
-    unsigned short* offset_head;
-    unsigned short* L_head;
+    unsigned char* offset_tail;
+    unsigned char* L_tail;
+    unsigned char* offset_head;
+    unsigned char* L_head;
 
     MONI_Table(const std::string&, int, bool);
 };
