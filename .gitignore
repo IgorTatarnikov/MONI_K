@@ -2,6 +2,7 @@ cmake-build-debug/
 .idea/
 program
 *.txt
+!CMakeLists.txt
 *Table[0-9]*
 table*
 *_Summary*

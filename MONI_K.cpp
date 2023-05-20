@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     if (useTestFile) {
         fileName = "../test";
     } else {
-        std::cout << "Please enter the file name" << std::endl;
+        std::cout << "Please enter the file names" << std::endl;
         std::cin >> fileName;
     }
 
