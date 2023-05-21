@@ -18,9 +18,9 @@ public:
     unsigned int* finger;
     char* BWT_head;
     unsigned char* offset_tail;
-    unsigned char* L_tail;
+    unsigned int* L_tail;
     unsigned char* offset_head;
-    unsigned char* L_head;
+    unsigned int* L_head;
 
     MONI_Table(const std::string&, int, bool);
 };

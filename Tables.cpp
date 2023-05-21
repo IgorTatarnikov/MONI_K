@@ -26,9 +26,9 @@ MONI_Table::MONI_Table(const std::string &fileName, int r, bool kConstruction) {
 
     if (kConstruction) {
         offset_tail = (unsigned char*) calloc(r, sizeof(*offset_tail));
-        L_tail = (unsigned char*) calloc(r, sizeof(*L_tail));
+        L_tail = (unsigned int*) calloc(r, sizeof(*L_tail));
         offset_head = (unsigned char*) calloc(r, sizeof(*offset_head));
-        L_head = (unsigned char*) calloc(r, sizeof(*L_head));
+        L_head = (unsigned int*) calloc(r, sizeof(*L_head));
         input.read((char*) offset_tail, r * sizeof(*offset_tail));
         input.read((char*) L_tail, r * sizeof(*L_tail));
         input.read((char*) offset_head, r * sizeof(*offset_head));

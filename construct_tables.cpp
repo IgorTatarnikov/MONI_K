@@ -35,19 +35,25 @@ int main(int argc, char** argv) {
             run_heads.push_back(i);
             r++;
         }
+
+        if (i % (n / 20) == 0) {
+            std::cout << "Progress: " << ((float)i / n) * 100 << "%" << std::endl;
+        }
     }
 
     //Filling the MONI table based on the BWT and LCP data structures
     auto** tableMONI = (unsigned int**) calloc(table2NumColumns, sizeof(unsigned int*));
     auto* BWTHeads = (char*) calloc(r, sizeof(char));
-    auto** preCalcK = (unsigned char**) calloc(4, sizeof(unsigned char*));
+    auto** preCalcOffsets = (unsigned char**) calloc(2, sizeof(unsigned char*));
+    auto** preCalcLs = (unsigned int**) calloc(2, sizeof(unsigned int*));
 
     for (int i = 0; i < table2NumColumns; i++) {
         tableMONI[i] = (unsigned int*) calloc(r, sizeof(*tableMONI[i]));
     }
 
-    for (int i = 0; i < 4; i++) {
-        preCalcK[i] = (unsigned char*) calloc(r, sizeof(*preCalcK[i]));
+    for (int i = 0; i < 2; i++) {
+        preCalcOffsets[i] = (unsigned char*) calloc(r, sizeof(*preCalcOffsets[i]));
+        preCalcLs[i] = (unsigned int*) calloc(r, sizeof(*preCalcLs[i]));
     }
 
     //Breakpoint used to keep track of the progress of the table construction
@@ -82,12 +88,12 @@ int main(int argc, char** argv) {
     //Calculating the offset_tail and L_tail values for the tail of each run only if kConstruction is true
     if (kConstruction) {
         unsigned int LCPMin;
-        unsigned char L_head;
+        unsigned int L_head;
         unsigned char offset_head;
         unsigned int start_head;
         unsigned int max_head;
 
-        unsigned char L_tail;
+        unsigned int L_tail;
         unsigned char offset_tail;
         unsigned int start_tail;
         unsigned int max_tail;
@@ -137,10 +143,10 @@ int main(int argc, char** argv) {
             }
 
             //Record the offset_tail and L_tail
-            preCalcK[0][i] = offset_tail;
-            preCalcK[1][i] = L_tail;
-            preCalcK[2][i] = offset_head;
-            preCalcK[3][i] = L_head;
+            preCalcOffsets[0][i] = offset_tail;
+            preCalcLs[0][i] = L_tail;
+            preCalcOffsets[1][i] = offset_head;
+            preCalcLs[1][i] = L_head;
 
             if (breakpoint && (i % breakpoint == 0)) {
                 std::cout << "Done with " << ((float) i/r) * 100 << "%" << std::endl;
@@ -221,8 +227,9 @@ int main(int argc, char** argv) {
 
     tableMONIFile.write((char*) BWTHeads, r);
 
-    for (int i = 0; i < 4; i++) {
-        tableMONIFile.write((char*) preCalcK[i], r * sizeof(*preCalcK[i]));
+    for (int i = 0; i < 2; i++) {
+        tableMONIFile.write((char*) preCalcOffsets[i], r * sizeof(*preCalcOffsets[i]));
+        tableMONIFile.write((char*) preCalcLs[i], r * sizeof(*preCalcLs[i]));
     }
 
     tableMONIFile.close();
