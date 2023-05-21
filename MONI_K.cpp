@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> testPatterns;
 
     if (useTestPatterns) {
-        testPatterns = readTestStrings("test_strings.txt");
+        testPatterns = readTestStrings("../test_strings.txt");
     } else {
         std::cout << "Please enter the pattern" << std::endl;
         std::string pattern;
